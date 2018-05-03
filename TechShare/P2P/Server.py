@@ -41,7 +41,7 @@ def getPort(url):
     netloc = urlparse(url)[1]
     port = netloc.split(':')
 
-    return port[1]
+    return int(port[1])
 
 class Node:
     def __init__(self, url, dirname, secret):
@@ -65,9 +65,9 @@ class Node:
         dir = self.dirname
         name = join(dir, query)
         if not isfile(name): raise UnhanledQuery
-        if not inside(name): raise AccessDenied
+        if not inside(dir, name): raise AccessDenied
 
-        with.open(name) ad file:
+        with open(name) as file:
             content = file.read()
         return content
 
@@ -93,7 +93,7 @@ class Node:
         '''
         启动服务
         '''
-        simpleRPCServer = SimpleXMLRPCServer(("", getPort(self.url)), logRequest = False)
+        simpleRPCServer = SimpleXMLRPCServer(("", getPort(self.url)), logRequests = False)
         simpleRPCServer.register_instance(self)
         simpleRPCServer.serve_forever()
 
@@ -101,4 +101,23 @@ class Node:
         '''
         广播
         '''
-        
+        for other in self.konw.copy():
+            if other in history: 
+                continue
+            try:
+                s = ServerProxy(other)
+                return s.query(query, history)
+            except Fault, f:
+                if f.faultCode == UNHANDLED:
+                    pass
+                else:
+                    self.know.remove(other)
+        raise UnhanledQuery
+
+def main():
+    url, directory, secret = sys.argv[1:]
+    n = Node(url, directory, secret)
+    n._start()
+
+if __name__ == '__main__': 
+    main()
